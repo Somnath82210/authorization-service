@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  firstName           String
+  lastName            String
+  phoneNumber         Int
+  phoneNumberVerified DateTime?
+  email               String        @unique
+  emailVerified       DateTime?
+  statusCode          Int           @default(0)
+  image               String?
+  hashedPassword      String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  kycStatus           Int?          @default(0)
+  isAdmin             Boolean?      @default(false)
+  adminLevel          Int?          @default(0)
+  ondc                Ondc[]
+  storetiming         StoreTiming[]
+  bankDetails         BankDetails[]
+  kyc                 Kyc[]
+  adminId             String @db.ObjectId
+  admin               UserAdmin   @relation(fields: [adminId], references: [id])
+}
+
+model UserAdmin {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  adminLevel Int?
+  adminName  String
+  userId     String @db.ObjectId
+  user       User[]
+}
+
+model KycDone {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  kycStatus    Int?     @default(0)
+  userId       String   @db.ObjectId
+  statusCode   Int      @default(0)
+  adminApprove Boolean? @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Kyc {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessName   String
+  companyTitle   String
+  legalName      String
+  info           String
+  logo           String
+  website        String?
+  address        String
+  city           String
+  country        String
+  state          String
+  pinCode        String
+  geolocation    String
+  contactEmail   String
+  contactPhone   Int
+  pan            String
+  gstin          String
+  fssaiNo        String?
+  canceledCheque String
+  addressProof   String
+  idProof        String
+  locationAvail  String
+  organization   String?
+  packageWeight  String?
+  hsn            String?
+  distrLicenseNo String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+model BankDetails {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  accountHolderName String
+  accountNumber     Int
+  bankName          String
+  bankCity          String
+  branch            String
+  IfscCode          String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id])
+}
+
+model Ondc {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  timeToShip         String
+  cancellable        Boolean
+  returnable         Boolean
+  returnableDate     BigInt?  @default(0)
+  sellerPickupReturn Boolean?
+  availableCOD       Boolean?
+  defaultCategoryId  String
+  consumerCare       String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  userId             String   @db.ObjectId
+  user               User     @relation(fields: [userId], references: [id])
+}
+
+model StoreTiming {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  days      String
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+}
