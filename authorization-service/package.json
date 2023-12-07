@@ -1,5 +1,5 @@
 {
-  "name": "aggregator",
+  "name": "Authorization",
   "version": "1.0.0",
   "description": "authorization section",
   "main": "index.js",
