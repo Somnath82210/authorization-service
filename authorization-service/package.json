@@ -1,7 +1,7 @@
 {
   "name": "aggregator",
   "version": "1.0.0",
-  "description": "seller-app",
+  "description": "authorization section",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,7 +9,7 @@
     "debug:watch": "nodemon --inspect src/index.ts",
     "dev": "NODE_ENV=development nodemon --exec 'npm start' | pino-pretty"
   },
-  "author": "a1future",
+  "author": "somnath",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.3.1",
