@@ -85,3 +85,20 @@ export type userData = {
     isAdmin: boolean | null,
     adminLevel: number | null
 }[]
+export type tokenVerifyType = {
+    data:
+    {
+        id:string,
+        email: string,
+        hashedPassword: string,
+        kycStatus:number,
+        statusCode:number,
+        isAdmin:boolean,
+        adminLevel:number
+    } 
+}
+export interface PromiseResult{
+status:boolean,
+message:string,
+data?:any
+}

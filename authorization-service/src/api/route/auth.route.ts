@@ -6,7 +6,8 @@ import {
     userlist,
     countSellersController,
     activeInactiveController,
-    editSellerController
+    editSellerController,
+    activeInactiveProductController
 } from "../controllers/auth.controller";
 import express from "express";
 import multer from 'multer';
@@ -23,4 +24,5 @@ routes.get('/checkadmin', adminLevelCheckController);
 routes.get('/count', countSellersController);
 routes.put('/changeaccstatus?:id', activeInactiveController);
 routes.put('/kyc?:id',upload.any(), editSellerController);
+routes.put('/pdtactive?:id', activeInactiveProductController);
 export default routes;

@@ -19,13 +19,16 @@ model User {
   email               String        @unique
   emailVerified       DateTime?
   statusCode          Int           @default(0)
-  image               String?
+  profImage           String?
   hashedPassword      String
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   kycStatus           Int?          @default(0)
   isAdmin             Boolean?      @default(false)
   adminLevel          Int?          @default(0)
+  bio                 String? 
+  timeZone            String?
+  parentId            String[]
   ondc                Ondc[]
   storetiming         StoreTiming[]
   bankDetails         BankDetails[]
@@ -34,10 +37,45 @@ model User {
   admin               UserAdmin   @relation(fields: [adminId], references: [id])
 }
 
+model Products {
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  productName              String
+  productDescription       String
+  productQty               Int
+  productPrice             Int
+  productPhoto             String?
+  packageWeight            Int
+  statusCode               Int      @default(0)
+  timeToShip               String?
+  cancellable              Boolean
+  returnable               Boolean
+  totalPrice               Int?
+  brand                    String?
+  refund                   Boolean
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  hsn_sac                  String
+  mrp                      Int?
+  tax                      String?
+  publish                  Boolean  @default(true)
+  ean                      String?
+  adminApprove             Boolean? @default(false)
+  brandOwnerName           String
+  brandOwnerAddress        String
+  expiryDate_bestBeforeUse String
+  batchNumber              Int
+  handling_instructions    String
+  storage                  Boolean? @default(false)
+  storageCondition         String?
+  userId                   String   @db.ObjectId
+}
+
+
 model UserAdmin {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
   adminLevel Int?
   adminName  String
+  email      String @unique
   userId     String @db.ObjectId
   user       User[]
 }
