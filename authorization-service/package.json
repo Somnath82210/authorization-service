@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.3.1",
+    "@types/axios": "^0.14.0",
     "@types/bcryptjs": "^2.4.4",
     "@types/body-parser": "^1.19.3",
     "@types/cors": "^2.8.14",
@@ -25,6 +26,8 @@
     "@types/mongodb": "^4.0.7",
     "@types/morgan": "^1.9.6",
     "@types/multer": "^1.4.11",
+    "@types/nodemailer": "^6.4.14",
+    "axios": "^1.6.5",
     "bcrypt": "^5.1.1",
     "bcrypt-ts": "^4.0.0",
     "bcryptjs": "^2.4.3",
@@ -34,7 +37,8 @@
     "moment-timezone": "^0.5.43",
     "mongodb": "^6.2.0",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.8"
   },
   "devDependencies": {
     "@types/node": "20.7.0",
