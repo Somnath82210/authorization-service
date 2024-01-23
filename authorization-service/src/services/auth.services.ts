@@ -14,10 +14,17 @@ import {
   prismaKycUrl,
   prismaUserDataUrl,
   prismaProductUrl,
-  prismaAdminDataUrl
+  prismaAdminDataUrl,
 } from "../db/connect";
-import { localDateChanger, encryptHash, stringToBool } from "../utils/helpers";
+import {
+  localDateChanger,
+  encryptHash,
+  stringToBool,
+  sendMail,
+  sendSMS,
+} from "../utils/helpers";
 import { tokenVerify } from "../utils/authVerify";
+import axios from "axios";
 dotenv.config();
 
 export function authorization(token: string) {
@@ -655,26 +662,30 @@ export function createAdminsService(
       });
       if (adminCheck[0].isAdmin === true) {
         let hashedPassword: string = await encryptHash(data.hashedPassword);
-        await prismaUserDataUrl.user.create({
-          data: {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            phoneNumber: Number(data.phoneNumber),
-            hashedPassword: hashedPassword,
-            parentId:(verified.data.id==="652e0ec6b44f82ea2be52c46")? ["652e0ec6b44f82ea2be52c46"]:[verified.data.id,"652e0ec6b44f82ea2be52c46"],
-            adminId: verified.data.id,
-            isAdmin:data.isAdmin,
-            adminLevel:Number(data.adminLevel)
-          },
-        }).then(async(res:any)=>{
-          // await prismaAdminDataUrl.userAdmin.create({
-          //   data:{
-          //     email:
-          //   }
-          // })
-
-        })
+        await prismaUserDataUrl.user
+          .create({
+            data: {
+              firstName: data.firstName,
+              lastName: data.lastName,
+              email: data.email,
+              phoneNumber: Number(data.phoneNumber),
+              hashedPassword: hashedPassword,
+              parentId:
+                verified.data.id === "652e0ec6b44f82ea2be52c46"
+                  ? ["652e0ec6b44f82ea2be52c46"]
+                  : [verified.data.id, "652e0ec6b44f82ea2be52c46"],
+              adminId: verified.data.id,
+              isAdmin: data.isAdmin,
+              adminLevel: Number(data.adminLevel),
+            },
+          })
+          .then(async (res: any) => {
+            // await prismaAdminDataUrl.userAdmin.create({
+            //   data:{
+            //     email:
+            //   }
+            // })
+          });
       } else if ((adminCheck.length = 0)) {
         resolve({ status: false, message: "no user found" });
       } else {
@@ -686,12 +697,193 @@ export function createAdminsService(
     }
   });
 }
-
-export function forgotPasswordService(data:any): Promise<PromiseResult> {
+export function dashBoardInformations(token: string): Promise<PromiseResult> {
   return new Promise(async (resolve, reject) => {
     try {
+      let verified = (await tokenVerify(token)) as tokenVerifyType | any;
+      if (verified.data === "error") {
+        console.log("error in token");
+        resolve({ status: false, message: "error on token" });
+      }
+      let adminCheck: userData = await prismaUserDataUrl.user.findMany({
+        where: {
+          id: verified.data.id as string,
+        },
+        select: {
+          isAdmin: true,
+          adminLevel: true,
+        },
+      });
+      if (adminCheck.length > 0) {
+        let data = await prismaKycUrl.kyc.findMany({
+          where: {
+            userId: verified.data.id,
+          },
+          select: {
+            logo: true,
+            businessName: true,
+            companyTitle: true,
+          },
+        });
+        resolve({ status: true, message: "dashboard data", data: data[0] });
+      } else {
+        resolve({ status: false, message: "no user found" });
+      }
+    } catch (error) {
+      console.log("error in service", error);
+      reject({ status: false, message: "internal server error", data: error });
+    }
+  });
+}
 
+export function dashBoardEdit(
+  token: string,
+  data: any,
+  file: any
+): Promise<PromiseResult> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let verified = (await tokenVerify(token)) as tokenVerifyType | any;
+      if (verified.data === "error") {
+        console.log("error in token");
+        resolve({ status: false, message: "error on token" });
+      }
+      let adminCheck: userData = await prismaUserDataUrl.user.findMany({
+        where: {
+          id: verified.data.id as string,
+        },
+        select: {
+          isAdmin: true,
+          adminLevel: true,
+        },
+      });
+      if (adminCheck.length > 0) {
+        let kycID = await prismaKycUrl.kyc.findMany({
+          where: {
+            userId: verified.data.id as string,
+          },
+          select: {
+            id: true,
+            logo: true,
+          },
+        });
+        await prismaKycUrl.kyc
+          .updateMany({
+            where: {
+              id: kycID[0].id as any,
+            },
+            data: {
+              logo: file.length > 0 ? file[0].path : kycID[0].logo,
+              businessName: data.businessName,
+              companyTitle: data.companyTitle,
+            },
+          })
+          .then((res: any) => {
+            console.log(res);
+            resolve({ status: true, message: "dashboard data updated" });
+          });
+      } else {
+        resolve({ status: false, message: "no user found" });
+      }
+    } catch (error) {
+      console.log("error in service", error);
+      reject({ status: false, message: "internal server error", data: error });
+    }
+  });
+}
+export function forgotPasswordService(data: any): Promise<PromiseResult> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (data.hashedPassword !== data.reType) {
+        resolve({ status: false, message: "password mis-match" });
+      }
+      let passwordHashed = await encryptHash(data.password);
 
+      resolve({ status: true, message: "password changed" });
+    } catch (error) {
+      console.log("error in service", error);
+      reject({ status: false, message: "internal server error", data: error });
+    }
+  });
+}
+
+export function verificationService(data: any): Promise<PromiseResult> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let userDetails: any;
+      let regex: any = /@/;
+      if (regex.test(data.verify)) {
+        userDetails = await prismaUserDataUrl.user.findFirst({
+          where: {
+            email: data.verify,
+          },
+          select: {
+            emailVerified: true,
+            phoneNumberVerified: true,
+          },
+        });
+      } else {
+        userDetails = await prismaUserDataUrl.user.findFirst({
+          where: {
+            phoneNumber: Number(data.verify),
+          },
+          select: {
+            emailVerified: true,
+            phoneNumberVerified: true,
+          },
+        });
+      }
+      if (
+        userDetails !== null &&
+        userDetails.emailVerified === true &&
+        userDetails.phoneNumberVerified === true
+      ) {
+        resolve({ status: false, message: "Email and Phone already verified" });
+      } else if (
+        userDetails !== null &&
+        userDetails.emailVerified === false &&
+        userDetails.phoneNumberVerified === true
+      ) {
+        let mailSent: any = await sendMail(data.verify as string);
+        if (mailSent.error) {
+          resolve({ status: false, message: "error while sending mail" });
+        } else if (mailSent.data) {
+          resolve({ status: true, message: "OTP sent to mail id" });
+        }
+      } else if (
+        userDetails !== null &&
+        userDetails.emailVerified === true &&
+        userDetails.phoneNumberVerified === false
+      ) {
+        let smsSent: any = await sendSMS(data.verify as string);
+        if (smsSent.error) {
+          resolve({ status: false, message: "error while sending sms" });
+        } else if (smsSent.data) {
+          resolve({ status: true, message: "OTP sent to phone number" });
+        }
+      } else if (
+        userDetails !== null &&
+        userDetails.emailVerified === false &&
+        userDetails.phoneNumberVerified === false
+      ) {
+        if (regex.test(data.verify)) {
+          let mailSent: any = await sendMail(data.verify as string);
+          if (mailSent.error) {
+            resolve({ status: false, message: "error while sending mail" });
+          } else if (mailSent.data) {
+            resolve({ status: true, message: "OTP sent to mail id" });
+          }
+        } else {
+          let smsSent: any = await sendSMS(data.verify as string);
+          if (smsSent.error) {
+            resolve({ status: false, message: "error while sending sms" });
+          } else if (smsSent.data) {
+            resolve({ status: true, message: "OTP sent to phone number" });
+          }
+        }
+      } else {
+        resolve({ status: false, message: "Register First" });
+      }
     } catch (error) {
       console.log("error in service", error);
       reject({ status: false, message: "internal server error", data: error });

@@ -11,6 +11,9 @@ import {
   activeInactiveProductService,
   createAdminsService,
   forgotPasswordService,
+  dashBoardInformations,
+  dashBoardEdit,
+  verificationService,
 } from "../../services/auth.services";
 import asynErr from "../../utils/asyncErr";
 import ErrorHandler from "../../utils/errorHandler";
@@ -257,13 +260,82 @@ export const forgotPasswordController = asynErr(
     let data = req.body;
     let services = await forgotPasswordService(data);
     if (services.status === true) {
+      res.status(statusCode.OK).json({
+        success: true,
+        message: services.message,
+        data: services.data,
+      });
+    } else if (services.status === false) {
       res
-        .status(statusCode.OK)
-        .json({
-          success: true,
-          message: services.message,
-          data: services.data,
-        });
+        .status(statusCode.UNAUTHORIZED)
+        .json({ success: false, error: services.message });
+    } else {
+      throw new ErrorHandler(
+        "internal server eroor",
+        statusCode.INTERNALSERVERERROR
+      );
+    }
+  }
+);
+
+export const dashBoardInformationController = asynErr(
+  async (req: Request, res: Response, next: NextFunction) => {
+    let token = req.headers.authorization as string;
+    let services = await dashBoardInformations(token);
+    if (services.status === true) {
+      res.status(statusCode.OK).json({
+        success: true,
+        message: services.message,
+        data: services.data,
+      });
+    } else if (services.status === false) {
+      res
+        .status(statusCode.UNAUTHORIZED)
+        .json({ success: false, error: services.message });
+    } else {
+      throw new ErrorHandler(
+        "internal server eroor",
+        statusCode.INTERNALSERVERERROR
+      );
+    }
+  }
+);
+
+export const dashBoardUpdateController = asynErr(
+  async (req: Request, res: Response, next: NextFunction) => {
+    let token = req.headers.authorization as string;
+    let data = req.body;
+    let file = req.files;
+    let services = await dashBoardEdit(token, data, file);
+    if (services.status === true) {
+      res.status(statusCode.OK).json({
+        success: true,
+        message: services.message,
+        data: services.data,
+      });
+    } else if (services.status === false) {
+      res
+        .status(statusCode.UNAUTHORIZED)
+        .json({ success: false, error: services.message });
+    } else {
+      throw new ErrorHandler(
+        "internal server eroor",
+        statusCode.INTERNALSERVERERROR
+      );
+    }
+  }
+);
+
+export const verificationController = asynErr(
+  async (req: Request, res: Response, next: NextFunction) => {
+    let data = req.body;
+    let services = await verificationService(data);
+    if (services.status === true) {
+      res.status(statusCode.OK).json({
+        success: true,
+        message: services.message,
+        data: services.data,
+      });
     } else if (services.status === false) {
       res
         .status(statusCode.UNAUTHORIZED)

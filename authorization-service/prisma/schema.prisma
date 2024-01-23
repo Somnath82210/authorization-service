@@ -15,9 +15,9 @@ model User {
   firstName           String
   lastName            String
   phoneNumber         Int
-  phoneNumberVerified DateTime?
+  phoneNumberVerified Boolean       @default(false)
   email               String        @unique
-  emailVerified       DateTime?
+  emailVerified       Boolean       @default(false)
   statusCode          Int           @default(0)
   profImage           String?
   hashedPassword      String
@@ -26,15 +26,15 @@ model User {
   kycStatus           Int?          @default(0)
   isAdmin             Boolean?      @default(false)
   adminLevel          Int?          @default(0)
-  bio                 String? 
+  bio                 String?
   timeZone            String?
   parentId            String[]
   ondc                Ondc[]
   storetiming         StoreTiming[]
   bankDetails         BankDetails[]
   kyc                 Kyc[]
-  adminId             String @db.ObjectId
-  admin               UserAdmin   @relation(fields: [adminId], references: [id])
+  adminId             String        @db.ObjectId
+  admin               UserAdmin     @relation(fields: [adminId], references: [id])
 }
 
 model Products {
@@ -69,7 +69,6 @@ model Products {
   storageCondition         String?
   userId                   String   @db.ObjectId
 }
-
 
 model UserAdmin {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
