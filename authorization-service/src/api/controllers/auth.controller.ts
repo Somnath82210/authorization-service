@@ -12,8 +12,8 @@ import {
   createAdminsService,
   forgotPasswordService,
   dashBoardInformations,
-  dashBoardEdit,
   verificationService,
+  OTPcheckerService,
 } from "../../services/auth.services";
 import asynErr from "../../utils/asyncErr";
 import ErrorHandler from "../../utils/errorHandler";
@@ -43,7 +43,8 @@ export const authorizationController = asynErr(
 export const userlist = asynErr(
   async (req: Request, res: Response, next: NextFunction) => {
     let token = req.headers.authorization as string;
-    let services: any = await userlistService(token);
+    let query = req.query as any;
+    let services: any = await userlistService(token, query);
     if (services.status === true) {
       res.status(statusCode.OK).json({
         success: true,
@@ -301,12 +302,11 @@ export const dashBoardInformationController = asynErr(
   }
 );
 
-export const dashBoardUpdateController = asynErr(
+export const verificationController = asynErr(
   async (req: Request, res: Response, next: NextFunction) => {
-    let token = req.headers.authorization as string;
     let data = req.body;
-    let file = req.files;
-    let services = await dashBoardEdit(token, data, file);
+    let token = req.headers.authorization;
+    let services = await verificationService(token, data);
     if (services.status === true) {
       res.status(statusCode.OK).json({
         success: true,
@@ -326,10 +326,11 @@ export const dashBoardUpdateController = asynErr(
   }
 );
 
-export const verificationController = asynErr(
+export const OTPverificationController = asynErr(
   async (req: Request, res: Response, next: NextFunction) => {
     let data = req.body;
-    let services = await verificationService(data);
+    let token = req.headers.authorization as string;
+    let services = await OTPcheckerService(token, data);
     if (services.status === true) {
       res.status(statusCode.OK).json({
         success: true,

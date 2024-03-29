@@ -56,7 +56,7 @@ export function localDateChanger(date: any) {
   return currentTimeZone.format("YYYY-MM-DD HH:mm:ss");
 }
 
-export async function sendMail(data: string) {
+export async function sendMail(data: string, otp: string) {
   return new Promise(async (resolve, reject) => {
     const transporter = await nodemailer.createTransport({
       host: "mail.a1future.net",
@@ -67,31 +67,29 @@ export async function sendMail(data: string) {
         pass: "x_z}(hBBb}-e",
       },
     });
-    const otp = Math.floor(100000 + Math.random() * 900000);
     await transporter.sendMail(
       {
         from: "somnath_dutta@a1future.net", // sender address
         to: data, // list of receivers
         subject: "Email Verification ✔", // Subject line
         text: "Do not Share this OTP", // plain text body
-        html: otp.toString(), // html body
+        html: otp, // html body
       },
       (error, value) => {
         if (error) {
           resolve({ error: "mail not sent" });
         } else if (value.response) {
-          resolve({ data: "mail sent" });
+          resolve({ data: "mail sent", otp: otp.toString() });
         }
       }
     );
   });
 }
 
-export async function sendSMS(data: string) {
+export async function sendSMS(data: string, otp: string) {
   return new Promise(async (resolve, reject) => {
-    const otp = Math.floor(100000 + Math.random() * 900000);
     let dataSMS = {
-      variables_values: otp.toString(),
+      variables_values: otp,
       route: "otp",
       numbers: data,
     };
@@ -103,7 +101,7 @@ export async function sendSMS(data: string) {
         headers,
       })
       .then(() => {
-        resolve({ data: "sms sent" });
+        resolve({ data: "sms sent", otp: otp });
       })
       .catch((err: any) => {
         console.log("error from axios catch", err);

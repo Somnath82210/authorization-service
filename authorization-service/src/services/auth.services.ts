@@ -9,6 +9,7 @@ import {
   userData,
   adminLevelCheck,
   tokenVerifyType,
+  senderPromise,
 } from "../utils/types";
 import {
   prismaKycUrl,
@@ -24,8 +25,13 @@ import {
   sendSMS,
 } from "../utils/helpers";
 import { tokenVerify } from "../utils/authVerify";
-import axios from "axios";
+
 dotenv.config();
+
+function otpGenerate() {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  return otp;
+}
 
 export function authorization(token: string) {
   return new Promise(async (resolve, reject) => {
@@ -231,7 +237,7 @@ export function kycList(token: string, id: string) {
   });
 }
 
-export function userlistService(token: string) {
+export function getAdminService(token: string): Promise<PromiseResult> {
   return new Promise(async (resolve, reject) => {
     try {
       let verify: any = await tokenVerify(token);
@@ -239,92 +245,153 @@ export function userlistService(token: string) {
         console.log("error in token");
         resolve({ status: false, message: "error on token" });
       }
-      await prismaUserDataUrl.user
-        .findMany({
+      if (verify.data.isAdmin === true) {
+        let superAdminData = await prismaUserDataUrl.user.findMany({
           where: {
             id: verify.data.id,
           },
-          select: {
-            isAdmin: true,
-            adminLevel: true,
-          },
-        })
-        .then((response: any) => {
-          if (response[0].isAdmin === true && response[0].adminLevel === 3) {
-            prismaUserDataUrl.user
-              .findMany({
-                where: {
-                  OR: [{ adminLevel: 0 }, { adminLevel: 1 }, { adminLevel: 2 }],
-                  statusCode: 0,
-                },
-              })
-              .then((res: any) => {
-                //  let localDate = localDateChanger()
-                for (let i in res) {
-                  res[i].updatedAt = localDateChanger(res[i].updatedAt);
-                  res[i].createdAt = localDateChanger(res[i].createdAt);
-                }
-                resolve({ status: true, message: "user list", data: res });
-              });
-          } else if (
-            response[0].isAdmin === true &&
-            response[0].adminLevel === 2
-          ) {
-            prismaUserDataUrl.user
-              .findMany({
-                where: {
-                  parentId: {
-                    hasSome: [verify.data.id],
-                  },
-                  OR: [{ adminLevel: 0 }, { adminLevel: 1 }],
-                  statusCode: 0,
-                },
-              })
-              .then((res: any) => {
-                console.log(res);
-                for (let i in res) {
-                  res[i].updatedAt = localDateChanger(res[i].updatedAt);
-                  res[i].createdAt = localDateChanger(res[i].createdAt);
-                }
-                resolve({ status: true, message: "user list", data: res });
-              });
-          } else if (
-            response[0].isAdmin === true &&
-            response[0].adminLevel === 1
-          ) {
-            prismaUserDataUrl.user
-              .findMany({
-                where: {
-                  parentId: {
-                    hasSome: [verify.data.id],
-                  },
-                  adminLevel: 0,
-                  statusCode: 0,
-                },
-              })
-              .then((res: any) => {
-                for (let i in res) {
-                  res[i].updatedAt = localDateChanger(res[i].updatedAt);
-                  res[i].createdAt = localDateChanger(res[i].createdAt);
-                }
-                resolve({ status: true, message: "user list", data: res });
-              });
-          } else if (response[0].isAdmin === false) {
-            prismaUserDataUrl.user
-              .findMany({
-                where: {
-                  id: verify.data.id,
-                },
-              })
-              .then((res: any) => {
-                for (let i in res) {
-                  res[i].updatedAt = localDateChanger(res[i].updatedAt);
-                  res[i].createdAt = localDateChanger(res[i].createdAt);
-                }
-                resolve({ status: true, message: "single user", data: res[0] });
-              });
-          }
         });
+      } else {
+        resolve({ status: false, message: "not and admin token" });
+      }
+    } catch (error) {
+      console.log("error in permission", error);
+      reject({ status: false, message: "error in service" });
+    }
+  });
+}
+
+export function userlistService(token: string, query: any) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let verify: any = await tokenVerify(token);
+      if (verify.data === "error") {
+        console.log("error in token");
+        resolve({ status: false, message: "error on token" });
+      }
+      let userData = await prismaUserDataUrl.user.findMany({
+        where: {
+          id: verify.data.id,
+        },
+        select: {
+          isAdmin: true,
+          adminLevel: true,
+        },
+      });
+      if (userData.length > 0) {
+        if (query.admin) {
+          if (userData[0].isAdmin === true && userData[0].adminLevel === 3) {
+            let adminList = await prismaUserDataUrl.user.findMany({
+              where: {
+                OR: [{ adminLevel: 0 }, { adminLevel: 1 }, { adminLevel: 2 }],
+                statusCode: 0,
+                adminId: verify.data.id,
+                isAdmin: true,
+              },
+            });
+            resolve({
+              status: true,
+              message: "admin list",
+              data: adminList,
+            });
+          } else if (
+            userData[0].isAdmin === true &&
+            userData[0].adminLevel === 2
+          ) {
+            let adminList = await prismaUserDataUrl.user.findMany({
+              where: {
+                OR: [{ adminLevel: 0 }, { adminLevel: 1 }],
+                statusCode: 0,
+                isAdmin: true,
+              },
+            });
+            resolve({
+              status: true,
+              message: "admin list",
+              data: adminList,
+            });
+          }
+        }
+        if (userData[0].isAdmin === true && userData[0].adminLevel === 3) {
+          await prismaUserDataUrl.user
+            .findMany({
+              where: {
+                // OR: [{ adminLevel: 0 }, { adminLevel: 1 }, { adminLevel: 2 }],
+                parentId: {
+                  hasSome: [verify.data.id],
+                },
+                isAdmin: false,
+                statusCode: 0,
+              },
+            })
+            .then((res: any) => {
+              //  let localDate = localDateChanger()
+              for (let i in res) {
+                res[i].updatedAt = localDateChanger(res[i].updatedAt);
+                res[i].createdAt = localDateChanger(res[i].createdAt);
+              }
+              resolve({ status: true, message: "user list", data: res });
+            });
+        } else if (
+          userData[0].isAdmin === true &&
+          userData[0].adminLevel === 2
+        ) {
+          await prismaUserDataUrl.user
+            .findMany({
+              where: {
+                parentId: {
+                  hasSome: [verify.data.id],
+                },
+                isAdmin: false,
+                statusCode: 0,
+              },
+            })
+            .then((res: any) => {
+              for (let i in res) {
+                res[i].updatedAt = localDateChanger(res[i].updatedAt);
+                res[i].createdAt = localDateChanger(res[i].createdAt);
+              }
+              resolve({ status: true, message: "user list", data: res });
+            });
+        } else if (
+          userData[0].isAdmin === true &&
+          userData[0].adminLevel === 1
+        ) {
+          await prismaUserDataUrl.user
+            .findMany({
+              where: {
+                parentId: {
+                  hasSome: [verify.data.id],
+                },
+                adminLevel: 0,
+                statusCode: 0,
+              },
+            })
+            .then((res: any) => {
+              for (let i in res) {
+                res[i].updatedAt = localDateChanger(res[i].updatedAt);
+                res[i].createdAt = localDateChanger(res[i].createdAt);
+              }
+              resolve({ status: true, message: "user list", data: res });
+            });
+        } else if (userData[0].isAdmin === false) {
+          await prismaUserDataUrl.user
+            .findMany({
+              where: {
+                id: verify.data.id,
+              },
+            })
+            .then((res: any) => {
+              for (let i in res) {
+                res[i].updatedAt = localDateChanger(res[i].updatedAt);
+                res[i].createdAt = localDateChanger(res[i].createdAt);
+              }
+              resolve({ status: true, message: "single user", data: res[0] });
+            });
+        }
+      } else {
+        resolve({ status: false, message: "no user found" });
+      }
     } catch (error) {
       console.log("error in permission", error);
       reject({ status: false, message: "error in service" });
@@ -680,11 +747,16 @@ export function createAdminsService(
             },
           })
           .then(async (res: any) => {
-            // await prismaAdminDataUrl.userAdmin.create({
-            //   data:{
-            //     email:
-            //   }
-            // })
+            await prismaAdminDataUrl.userAdmin.create({
+              data: {
+                userId: res.id,
+                email: data.email,
+                adminLevel: Number(data.adminLevel),
+                adminId: verified.data.id,
+                adminName: Number(data.adminLevel) === 2 ? "sadmin" : "jadmin",
+              },
+            });
+            resolve({ status: true, message: "admin created", data: res.id });
           });
       } else if ((adminCheck.length = 0)) {
         resolve({ status: false, message: "no user found" });
@@ -736,61 +808,6 @@ export function dashBoardInformations(token: string): Promise<PromiseResult> {
   });
 }
 
-export function dashBoardEdit(
-  token: string,
-  data: any,
-  file: any
-): Promise<PromiseResult> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let verified = (await tokenVerify(token)) as tokenVerifyType | any;
-      if (verified.data === "error") {
-        console.log("error in token");
-        resolve({ status: false, message: "error on token" });
-      }
-      let adminCheck: userData = await prismaUserDataUrl.user.findMany({
-        where: {
-          id: verified.data.id as string,
-        },
-        select: {
-          isAdmin: true,
-          adminLevel: true,
-        },
-      });
-      if (adminCheck.length > 0) {
-        let kycID = await prismaKycUrl.kyc.findMany({
-          where: {
-            userId: verified.data.id as string,
-          },
-          select: {
-            id: true,
-            logo: true,
-          },
-        });
-        await prismaKycUrl.kyc
-          .updateMany({
-            where: {
-              id: kycID[0].id as any,
-            },
-            data: {
-              logo: file.length > 0 ? file[0].path : kycID[0].logo,
-              businessName: data.businessName,
-              companyTitle: data.companyTitle,
-            },
-          })
-          .then((res: any) => {
-            console.log(res);
-            resolve({ status: true, message: "dashboard data updated" });
-          });
-      } else {
-        resolve({ status: false, message: "no user found" });
-      }
-    } catch (error) {
-      console.log("error in service", error);
-      reject({ status: false, message: "internal server error", data: error });
-    }
-  });
-}
 export function forgotPasswordService(data: any): Promise<PromiseResult> {
   return new Promise(async (resolve, reject) => {
     try {
@@ -807,9 +824,18 @@ export function forgotPasswordService(data: any): Promise<PromiseResult> {
   });
 }
 
-export function verificationService(data: any): Promise<PromiseResult> {
+export function verificationService(
+  token: any,
+  data: any
+): Promise<PromiseResult> {
   return new Promise(async (resolve, reject) => {
     try {
+      let otp: number = otpGenerate();
+      let verified = (await tokenVerify(token)) as tokenVerifyType | any;
+      if (verified.data === "error") {
+        console.log("error in token");
+        resolve({ status: false, message: "error on token" });
+      }
       let userDetails: any;
       let regex: any = /@/;
       if (regex.test(data.verify)) {
@@ -818,71 +844,158 @@ export function verificationService(data: any): Promise<PromiseResult> {
             email: data.verify,
           },
           select: {
+            id: true,
             emailVerified: true,
             phoneNumberVerified: true,
           },
         });
+        if (userDetails !== null) {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: userDetails.id,
+            },
+            data: {
+              verifyDetails: "email",
+              otp: otp.toString(),
+            },
+          });
+        } else if (token) {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: verified.data.id,
+            },
+            data: {
+              verifyDetails: "email",
+              otp: otp.toString(),
+            },
+          });
+        }
+        let mailSent: senderPromise = (await sendMail(
+          data.verify as string,
+          otp.toString()
+        )) as senderPromise;
+        if (mailSent.error) {
+          resolve({ status: false, message: "Invalid email address" });
+        } else if (mailSent.data) {
+          resolve({
+            status: true,
+            message: "OTP has been sent to mail",
+            data: mailSent.otp,
+          });
+        }
       } else {
         userDetails = await prismaUserDataUrl.user.findFirst({
           where: {
             phoneNumber: Number(data.verify),
           },
           select: {
+            id: true,
             emailVerified: true,
             phoneNumberVerified: true,
           },
         });
-      }
-      if (
-        userDetails !== null &&
-        userDetails.emailVerified === true &&
-        userDetails.phoneNumberVerified === true
-      ) {
-        resolve({ status: false, message: "Email and Phone already verified" });
-      } else if (
-        userDetails !== null &&
-        userDetails.emailVerified === false &&
-        userDetails.phoneNumberVerified === true
-      ) {
-        let mailSent: any = await sendMail(data.verify as string);
-        if (mailSent.error) {
-          resolve({ status: false, message: "error while sending mail" });
-        } else if (mailSent.data) {
-          resolve({ status: true, message: "OTP sent to mail id" });
+        if (userDetails !== null) {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: userDetails.id,
+            },
+            data: {
+              verifyDetails: "sms",
+              otp: otp.toString(),
+            },
+          });
+        } else if (token) {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: verified.data.id,
+            },
+            data: {
+              verifyDetails: "sms",
+              otp: otp.toString(),
+            },
+          });
         }
-      } else if (
-        userDetails !== null &&
-        userDetails.emailVerified === true &&
-        userDetails.phoneNumberVerified === false
-      ) {
-        let smsSent: any = await sendSMS(data.verify as string);
+        let smsSent: senderPromise = (await sendSMS(
+          data.verify as string,
+          otp.toString()
+        )) as senderPromise;
         if (smsSent.error) {
-          resolve({ status: false, message: "error while sending sms" });
+          resolve({ status: false, message: "Invalid phone number" });
         } else if (smsSent.data) {
-          resolve({ status: true, message: "OTP sent to phone number" });
+          resolve({
+            status: true,
+            message: "OTP has been sent to sms",
+            data: smsSent.otp,
+          });
         }
-      } else if (
-        userDetails !== null &&
-        userDetails.emailVerified === false &&
-        userDetails.phoneNumberVerified === false
-      ) {
-        if (regex.test(data.verify)) {
-          let mailSent: any = await sendMail(data.verify as string);
-          if (mailSent.error) {
-            resolve({ status: false, message: "error while sending mail" });
-          } else if (mailSent.data) {
-            resolve({ status: true, message: "OTP sent to mail id" });
-          }
+      }
+    } catch (error) {
+      console.log("error in service", error);
+      reject({ status: false, message: "internal server error", data: error });
+    }
+  });
+}
+
+export function OTPcheckerService(
+  token: any,
+  data: any
+): Promise<PromiseResult> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let verified = (await tokenVerify(token)) as tokenVerifyType | any;
+      if (verified.data === "error") {
+        console.log("error in token");
+        resolve({ status: false, message: "error on token" });
+      }
+      if (token) {
+        let otpCheck = await prismaUserDataUrl.user.findFirst({
+          where: {
+            id: verified.data.id,
+          },
+          select: {
+            otp: true,
+            verifyDetails: true,
+          },
+        });
+        if (otpCheck?.otp === data.otp) {
+          resolve({ status: true, message: "OTP matched" });
         } else {
-          let smsSent: any = await sendSMS(data.verify as string);
-          if (smsSent.error) {
-            resolve({ status: false, message: "error while sending sms" });
-          } else if (smsSent.data) {
-            resolve({ status: true, message: "OTP sent to phone number" });
-          }
+          resolve({ status: false, message: "Wrong OTP" });
+        }
+      }
+      let otpCheck = await prismaUserDataUrl.user.findFirst({
+        where: {
+          otp: data.otp as string,
+        },
+        select: {
+          id: true,
+          verifyDetails: true,
+        },
+      });
+      if (otpCheck !== null) {
+        if (otpCheck.verifyDetails === "email") {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: otpCheck.id,
+            },
+            data: {
+              emailVerified: true,
+            },
+          });
+          resolve({ status: true, message: "OTP matched" });
+        } else if (otpCheck.verifyDetails === "sms") {
+          await prismaUserDataUrl.user.update({
+            where: {
+              id: otpCheck.id,
+            },
+            data: {
+              phoneNumberVerified: true,
+            },
+          });
+          resolve({ status: true, message: "OTP matched" });
         }
       } else {
-        resolve({ status: false, message: "Register First" });
+        resolve({ status: false, message: "Wrong OTP" });
       }
     } catch (error) {
       console.log("error in service", error);

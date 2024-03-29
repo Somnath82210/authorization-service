@@ -9,8 +9,8 @@ import {
   editSellerController,
   activeInactiveProductController,
   dashBoardInformationController,
-  dashBoardUpdateController,
   verificationController,
+  OTPverificationController,
 } from "../controllers/auth.controller";
 import express from "express";
 import multer from "multer";
@@ -22,6 +22,7 @@ const upload = multer({ dest: "public/uploads/" });
 //POST
 routes.post("/checkout?:id", kycDone);
 routes.post("/verification", verificationController);
+routes.post("/otpverify", OTPverificationController);
 //GET
 routes.get("/authenticate", authorizationController);
 routes.get("/kyclist?:id", kycListController);
@@ -33,5 +34,4 @@ routes.get("/dashboard", dashBoardInformationController);
 routes.put("/changeaccstatus?:id", activeInactiveController);
 routes.put("/kyc?:id", upload.any(), editSellerController);
 routes.put("/pdtactive?:id", activeInactiveProductController);
-routes.put("/dashboardedit", upload.any(), dashBoardUpdateController);
 export default routes;
