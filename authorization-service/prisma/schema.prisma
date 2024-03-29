@@ -26,6 +26,8 @@ model User {
   kycStatus           Int?          @default(0)
   isAdmin             Boolean?      @default(false)
   adminLevel          Int?          @default(0)
+  verifyDetails       String?
+  otp                 String?
   bio                 String?
   timeZone            String?
   parentId            String[]
@@ -76,6 +78,7 @@ model UserAdmin {
   adminName  String
   email      String @unique
   userId     String @db.ObjectId
+  adminId    String @db.ObjectId
   user       User[]
 }
 
